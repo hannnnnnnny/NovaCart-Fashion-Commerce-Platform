@@ -24,13 +24,15 @@ import com.novacart.store.repository.OfferRepository;
 import com.novacart.store.repository.ReviewRepository;
 import com.novacart.store.repository.TradeOrderRepository;
 import com.novacart.store.repository.UserRepository;
-import jakarta.annotation.PostConstruct;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,9 +47,15 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>The data is centered on {@code ava@renova.local} (the account demos
  * usually sign in as) so that after login she has populated "buying",
  * "selling", "offers received/sent", "messages", and a reviewed profile.
+ *
+ * <p>Restricted to the {@code demo}, {@code dev} and {@code test} profiles.
+ * It must NOT run in the default/production profile: the seeded accounts use
+ * passwords committed to the public repo (e.g. {@code admin@renova.local}),
+ * so seeding them into a real deployment would hand anyone admin access.
  */
 @Component
-public class DataInitializer {
+@Profile({"demo", "dev", "test"})
+public class DataInitializer implements ApplicationRunner {
 
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
@@ -86,9 +94,18 @@ public class DataInitializer {
         this.passwordEncoder = passwordEncoder;
     }
 
-    @PostConstruct
+    /**
+     * Seeds after the context is fully built, in a single transaction. Spring
+     * invokes ApplicationRunner beans through the proxy, so @Transactional here
+     * actually applies (unlike on a @PostConstruct method, where init callbacks
+     * run before the transactional proxy wraps the bean). One transaction means
+     * all seed writes share a persistence context — consistent @Version tracking
+     * — and a mid-seed failure rolls the whole graph back instead of leaving a
+     * permanently partial one.
+     */
+    @Override
     @Transactional
-    public void seed() {
+    public void run(ApplicationArguments args) {
         seedCategories();
         seedUsers();
         if (listingRepository.count() == 0) {

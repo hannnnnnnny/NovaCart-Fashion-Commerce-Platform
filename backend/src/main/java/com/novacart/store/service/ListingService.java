@@ -9,6 +9,8 @@ import com.novacart.store.entity.ListingCondition;
 import com.novacart.store.entity.ListingStatus;
 import com.novacart.store.entity.User;
 import com.novacart.store.exception.BusinessRuleException;
+import com.novacart.store.exception.ConflictException;
+import com.novacart.store.exception.ForbiddenOperationException;
 import com.novacart.store.exception.ResourceNotFoundException;
 import com.novacart.store.repository.FavoriteRepository;
 import com.novacart.store.repository.ListingRepository;
@@ -115,10 +117,14 @@ public class ListingService {
         User current = currentUserService.requireCurrentUser();
         Listing listing = requireById(id);
         if (!listing.getSeller().getId().equals(current.getId())) {
-            throw new BusinessRuleException("You can only edit your own listings.");
+            throw new ForbiddenOperationException("You can only edit your own listings.");
         }
         if (listing.getStatus() == ListingStatus.SOLD) {
             throw new BusinessRuleException("Sold listings cannot be edited.");
+        }
+        if (listing.getStatus() == ListingStatus.RESERVED) {
+            // An order is in flight; editing (esp. re-activating) could enable a double-sale.
+            throw new BusinessRuleException("This listing has an order in progress and cannot be edited.");
         }
         if (request.title() != null) listing.setTitle(request.title().trim());
         if (request.description() != null) listing.setDescription(request.description().trim());
@@ -135,8 +141,12 @@ public class ListingService {
         }
         if (request.status() != null) {
             ListingStatus next = EnumParsers.required(ListingStatus.class, request.status(), "status");
-            if (next == ListingStatus.SOLD) {
-                throw new BusinessRuleException("Mark as sold via order completion, not manually.");
+            // Sellers may only toggle between ACTIVE and REMOVED. SOLD is set by
+            // order completion; RESERVED by an accepted offer / pending order.
+            // Anything else (e.g. REMOVED->ACTIVE to re-list a sold item, or
+            // forcing RESERVED) is rejected.
+            if (next != ListingStatus.ACTIVE && next != ListingStatus.REMOVED) {
+                throw new BusinessRuleException("A listing can only be set to active or removed.");
             }
             listing.setStatus(next);
         }
@@ -151,7 +161,13 @@ public class ListingService {
         User current = currentUserService.requireCurrentUser();
         Listing listing = requireById(id);
         if (!listing.getSeller().getId().equals(current.getId())) {
-            throw new BusinessRuleException("You can only remove your own listings.");
+            throw new ForbiddenOperationException("You can only remove your own listings.");
+        }
+        if (listing.getStatus() == ListingStatus.SOLD) {
+            throw new BusinessRuleException("Sold listings cannot be removed.");
+        }
+        if (listing.getStatus() == ListingStatus.RESERVED) {
+            throw new BusinessRuleException("This listing has an order in progress and cannot be removed.");
         }
         listing.setStatus(ListingStatus.REMOVED);
         listing.setUpdatedAt(Instant.now());
@@ -209,9 +225,31 @@ public class ListingService {
         listing.setUpdatedAt(Instant.now());
     }
 
+    /**
+     * Reserve an ACTIVE listing (offer accepted or buy-now checkout). Refuses
+     * to reserve anything not ACTIVE, so a leftover offer can't resurrect a
+     * SOLD/REMOVED item and two concurrent reservations can't both win (the
+     * loser also trips @Version → 409).
+     */
     @Transactional
     public void markReserved(Listing listing) {
+        if (listing.getStatus() != ListingStatus.ACTIVE) {
+            throw new ConflictException("This item is no longer available.");
+        }
         listing.setStatus(ListingStatus.RESERVED);
+        listing.setUpdatedAt(Instant.now());
+    }
+
+    /**
+     * Called when a buyer checks out against an already-accepted offer (the
+     * listing is RESERVED). Bumps the row so two concurrent checkouts of the
+     * same offer collide on @Version and one gets 409.
+     */
+    @Transactional
+    public void touchForCheckout(Listing listing) {
+        if (listing.getStatus() != ListingStatus.RESERVED) {
+            throw new ConflictException("This item is no longer available.");
+        }
         listing.setUpdatedAt(Instant.now());
     }
 

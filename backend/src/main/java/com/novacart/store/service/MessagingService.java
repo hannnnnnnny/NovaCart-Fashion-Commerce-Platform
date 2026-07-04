@@ -6,6 +6,7 @@ import com.novacart.store.entity.Listing;
 import com.novacart.store.entity.Message;
 import com.novacart.store.entity.User;
 import com.novacart.store.exception.BusinessRuleException;
+import com.novacart.store.exception.ForbiddenOperationException;
 import com.novacart.store.exception.ResourceNotFoundException;
 import com.novacart.store.repository.ConversationRepository;
 import com.novacart.store.repository.MessageRepository;
@@ -128,7 +129,7 @@ public class MessagingService {
         Conversation c = conversationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Conversation not found."));
         if (!c.getBuyer().getId().equals(user.getId()) && !c.getSeller().getId().equals(user.getId())) {
-            throw new BusinessRuleException("You are not a participant in this conversation.");
+            throw new ForbiddenOperationException("You are not a participant in this conversation.");
         }
         return c;
     }

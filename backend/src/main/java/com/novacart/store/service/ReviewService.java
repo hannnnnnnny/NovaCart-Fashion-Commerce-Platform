@@ -7,6 +7,7 @@ import com.novacart.store.entity.ReviewRole;
 import com.novacart.store.entity.TradeOrder;
 import com.novacart.store.entity.User;
 import com.novacart.store.exception.BusinessRuleException;
+import com.novacart.store.exception.ForbiddenOperationException;
 import com.novacart.store.exception.ResourceNotFoundException;
 import com.novacart.store.repository.ReviewRepository;
 import com.novacart.store.repository.UserRepository;
@@ -52,7 +53,7 @@ public class ReviewService {
             role = ReviewRole.SELLER_REVIEWS_BUYER;
             reviewee = order.getBuyer();
         } else {
-            throw new BusinessRuleException("You cannot review this order.");
+            throw new ForbiddenOperationException("You cannot review this order.");
         }
         if (reviewRepository.existsByOrderAndRole(order, role)) {
             throw new BusinessRuleException("You have already reviewed this order.");
