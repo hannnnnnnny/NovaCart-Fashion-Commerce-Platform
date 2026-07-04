@@ -32,6 +32,11 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       clearStoredAuthToken()
+      // Let the app reset in-memory auth state (Pinia) and redirect if needed.
+      // Using an event avoids a client <-> store import cycle.
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('renova:unauthorized'))
+      }
     }
     return Promise.reject(error)
   }

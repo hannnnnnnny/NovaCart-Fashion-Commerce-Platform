@@ -432,8 +432,25 @@ function route(config) {
     const mine = rawOffers.filter((o) => o.buyerId === uid)
     return paginate(mine.map(offerResponse), params)
   }
-  if (/^\/offers\/\d+\/(accept|reject|counter|withdraw|accept-counter)$/.test(path) && method === 'POST') {
-    return { ok: true } // demo: offer actions are no-ops
+  if ((m = /^\/offers\/(\d+)\/(accept|reject|counter|withdraw|accept-counter)$/.exec(path)) && method === 'POST') {
+    const o = rawOffers.find((x) => x.id === Number(m[1]))
+    if (!o) throw { status: 404, message: 'Offer not found' }
+    const next = {
+      accept: 'ACCEPTED', reject: 'REJECTED', counter: 'COUNTERED',
+      withdraw: 'WITHDRAWN', 'accept-counter': 'ACCEPTED'
+    }[m[2]]
+    o.status = next
+    o.respondedDays = 0
+    // Accepting an offer reserves its listing and rejects the siblings,
+    // mirroring the backend so the UI reflects a real state change.
+    if (m[2] === 'accept' || m[2] === 'accept-counter') {
+      const listing = listingById(o.listingId)
+      if (listing) listing.status = 'RESERVED'
+      rawOffers.forEach((x) => {
+        if (x.id !== o.id && x.listingId === o.listingId && x.status === 'PENDING') x.status = 'REJECTED'
+      })
+    }
+    return offerResponse(o)
   }
 
   // ---- orders ----
@@ -446,8 +463,17 @@ function route(config) {
   if ((m = /^\/orders\/(\d+)\/reviews$/.exec(path))) {
     return rawReviews.filter((r) => r.orderId === Number(m[1])).map(reviewResponse)
   }
-  if (/^\/orders\/\d+\/(pay|ship|confirm-receipt|cancel)$/.test(path) && method === 'POST') {
-    return { ok: true } // demo: order actions are no-ops
+  if ((m = /^\/orders\/(\d+)\/(pay|ship|confirm-receipt|cancel)$/.exec(path)) && method === 'POST') {
+    const o = rawOrders.find((x) => x.id === Number(m[1]))
+    if (!o) throw { status: 404, message: 'Order not found' }
+    // Advance the in-memory order so the detail page re-renders the new state
+    // (and, critically, returns a full order object — not { ok: true } — which
+    // the page assigns to `order.value`).
+    if (m[2] === 'pay') o.status = 'PAID'
+    else if (m[2] === 'ship') { o.status = 'SHIPPED'; o.carrier = body.carrier || o.carrier; o.tracking = body.trackingNumber || o.tracking }
+    else if (m[2] === 'confirm-receipt') { o.status = 'COMPLETED'; const l = listingById(o.listingId); if (l) l.status = 'SOLD' }
+    else if (m[2] === 'cancel') o.status = 'CANCELLED'
+    return orderResponse(o)
   }
   if ((m = /^\/orders\/(\d+)$/.exec(path))) {
     const o = rawOrders.find((x) => x.id === Number(m[1]))
@@ -488,6 +514,44 @@ function route(config) {
     const c = rawConversations.find((x) => x.id === Number(m[1]))
     if (!c) throw { status: 404, message: 'Conversation not found' }
     return conversationDetail(c, uid)
+  }
+
+  // ---- reviews ----
+  if (path === '/reviews' && method === 'POST') {
+    const order = rawOrders.find((x) => x.id === Number(body.orderId))
+    if (!order) throw { status: 404, message: 'Order not found' }
+    const buyerReviews = order.buyerId === uid
+    const revieweeId = buyerReviews ? order.sellerId : order.buyerId
+    const review = {
+      id: Date.now(),
+      orderId: order.id,
+      listingId: order.listingId,
+      reviewerId: uid,
+      revieweeId,
+      rating: Number(body.rating) || 5,
+      comment: body.comment || '',
+      role: buyerReviews ? 'BUYER_REVIEWS_SELLER' : 'SELLER_REVIEWS_BUYER',
+      days: 0
+    }
+    rawReviews.push(review)
+    return reviewResponse(review)
+  }
+
+  // ---- image upload ----
+  if (path === '/uploads/images' && method === 'POST') {
+    // config.data is a FormData; turn each real File into an object URL so the
+    // uploaded photo shows in the preview even though there's no backend.
+    const files = (config.data && typeof config.data.getAll === 'function')
+      ? config.data.getAll('files') : []
+    const images = files.map((f, i) => ({
+      url: (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function' && f && f.size != null)
+        ? URL.createObjectURL(f)
+        : asset('fashion-dress.jpg'),
+      contentType: (f && f.type) || 'image/jpeg',
+      size: (f && f.size) || 0,
+      originalName: (f && f.name) || `image-${i + 1}.jpg`
+    }))
+    return { images }
   }
 
   // default: succeed quietly so the demo never shows a hard error
