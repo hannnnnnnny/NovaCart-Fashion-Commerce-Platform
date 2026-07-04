@@ -17,6 +17,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import org.hibernate.annotations.BatchSize;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -68,7 +69,12 @@ public class Listing {
     @Column(name = "shipping_fee", precision = 12, scale = 2)
     private BigDecimal shippingFee;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    // Lazy + batched: a search page maps ListingSummary (which reads the cover
+    // image) for many rows; @BatchSize loads all their image lists in one extra
+    // query instead of one-per-row, without join-fetching (which would break
+    // keyset pagination).
+    @ElementCollection(fetch = FetchType.LAZY)
+    @BatchSize(size = 30)
     @CollectionTable(
             name = "listing_images",
             joinColumns = @JoinColumn(name = "listing_id", foreignKey = @ForeignKey(name = "fk_listing_image_listing"))

@@ -6,18 +6,26 @@ import com.novacart.store.entity.User;
 import java.math.BigDecimal;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ListingRepository extends JpaRepository<Listing, Long> {
 
+    // @EntityGraph join-fetches the to-one seller/category so mapping a page of
+    // ListingSummary rows doesn't fire a query per row. imageUrls stays lazy +
+    // @BatchSize (see Listing) so the collection loads in one batched query
+    // instead of being join-fetched (which would force in-memory pagination).
+    @EntityGraph(attributePaths = {"seller", "category"})
     Page<Listing> findBySellerOrderByCreatedAtDesc(User seller, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"seller", "category"})
     Page<Listing> findBySellerAndStatusOrderByCreatedAtDesc(User seller, ListingStatus status, Pageable pageable);
 
     long countBySellerAndStatus(User seller, ListingStatus status);
 
+    @EntityGraph(attributePaths = {"seller", "category"})
     @Query("""
             SELECT l FROM Listing l
             WHERE (:status IS NULL OR l.status = :status)

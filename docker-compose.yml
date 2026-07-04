@@ -15,8 +15,10 @@ services:
       MYSQL_USER: ${MYSQL_USER:?MYSQL_USER is required}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+    # Bind the DB port to loopback only — no reason to expose the database to
+    # the whole network. Override MYSQL_PORT if you need host access.
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
     volumes:
       - renova-mysql-data:/var/lib/mysql
     healthcheck:
@@ -39,8 +41,14 @@ services:
       JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-120}
       CORS_ALLOWED_ORIGINS: ${FRONTEND_ORIGIN:-http://localhost:3000}
       SERVER_PORT: 8080
+      # Persist uploaded images on the named volume below (not the container
+      # FS), so they survive `docker compose up --build`; otherwise the DB keeps
+      # image URLs while the files vanish, leaving broken images.
+      RENOVA_UPLOAD_DIR: /var/lib/renova/uploads
     ports:
       - "${BACKEND_PORT:-8080}:8080"
+    volumes:
+      - renova-uploads:/var/lib/renova/uploads
     depends_on:
       mysql:
         condition: service_healthy
@@ -58,3 +66,4 @@ services:
 
 volumes:
   renova-mysql-data:
+  renova-uploads:

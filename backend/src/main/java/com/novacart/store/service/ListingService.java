@@ -72,8 +72,8 @@ public class ListingService {
                 minPrice,
                 maxPrice,
                 cond,
-                (keyword == null || keyword.isBlank()) ? null : keyword.trim(),
-                (location == null || location.isBlank()) ? null : location.trim(),
+                sanitizeLike(keyword),
+                sanitizeLike(location),
                 pageable
         );
         return PageResponse.from(result.map(ListingDtos.ListingSummary::from));
@@ -82,7 +82,15 @@ public class ListingService {
     @Transactional
     public ListingDtos.ListingDetail get(Long id) {
         Listing listing = requireById(id);
-        listing.setViewCount(listing.getViewCount() + 1);
+        // A removed listing is gone as far as the public is concerned.
+        if (listing.getStatus() == ListingStatus.REMOVED) {
+            throw new ResourceNotFoundException("Listing not found.");
+        }
+        // Only count views on live listings, and skip the write entirely for
+        // RESERVED/SOLD so the hottest public read isn't a write on those.
+        if (listing.getStatus() == ListingStatus.ACTIVE) {
+            listing.setViewCount(listing.getViewCount() + 1);
+        }
         User current = currentUserService.getCurrentUserOrNull();
         boolean favorited = current != null && favoriteRepository.existsByUserAndListing(current, listing);
         return ListingDtos.ListingDetail.from(listing, favorited);
@@ -210,6 +218,17 @@ public class ListingService {
                 favoriteRepository.findByUserOrderByCreatedAtDesc(current, pageable)
                         .map(f -> ListingDtos.ListingSummary.from(f.getListing()))
         );
+    }
+
+    /**
+     * Strip SQL LIKE wildcards from a free-text search term so a user typing
+     * '%' or '_' doesn't turn the search into a match-everything / match-any
+     * pattern. Returns null for blank input (the query treats null as "no filter").
+     */
+    private static String sanitizeLike(String term) {
+        if (term == null || term.isBlank()) return null;
+        String stripped = term.trim().replaceAll("[%_\\\\]", "");
+        return stripped.isBlank() ? null : stripped;
     }
 
     @Transactional(readOnly = true)

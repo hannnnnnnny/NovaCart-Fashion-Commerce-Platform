@@ -13,6 +13,7 @@ import com.novacart.store.repository.MessageRepository;
 import com.novacart.store.security.CurrentUserService;
 import java.time.Instant;
 import java.util.List;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -104,7 +105,7 @@ public class MessagingService {
     @Transactional(readOnly = true)
     public List<MessageDtos.ConversationSummary> listMine() {
         User current = currentUserService.requireCurrentUser();
-        return conversationRepository.findAllForUser(current).stream()
+        return conversationRepository.findAllForUser(current, PageRequest.of(0, 100)).stream()
                 .map(c -> MessageDtos.ConversationSummary.from(c, current.getId()))
                 .toList();
     }

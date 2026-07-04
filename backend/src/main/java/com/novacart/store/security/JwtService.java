@@ -71,6 +71,9 @@ public class JwtService {
     private Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(secretKey)
+                // Tolerate small clock differences between issuer and verifier
+                // so a token isn't spuriously rejected right at its boundary.
+                .clockSkewSeconds(60)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
