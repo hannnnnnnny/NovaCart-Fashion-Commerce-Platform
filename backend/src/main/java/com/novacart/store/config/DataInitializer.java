@@ -33,6 +33,7 @@ import java.util.List;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,6 +55,7 @@ import org.springframework.transaction.annotation.Transactional;
  * so seeding them into a real deployment would hand anyone admin access.
  */
 @Component
+@Order(1)
 @Profile({"demo", "dev", "test"})
 public class DataInitializer implements ApplicationRunner {
 
@@ -106,26 +108,12 @@ public class DataInitializer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        seedCategories();
+        // Categories are seeded by ReferenceDataInitializer (@Order 0), which
+        // runs first and in every profile.
         seedUsers();
         if (listingRepository.count() == 0) {
             seedListingsAndTransactions();
         }
-    }
-
-    private void seedCategories() {
-        if (categoryRepository.count() > 0) return;
-        categoryRepository.saveAll(List.of(
-                new Category("Electronics", "electronics", "💻", 1),
-                new Category("Fashion", "fashion", "👕", 2),
-                new Category("Home & Living", "home", "🏠", 3),
-                new Category("Books & Media", "books", "📚", 4),
-                new Category("Sports & Outdoors", "sports", "⚽", 5),
-                new Category("Toys & Games", "toys", "🎮", 6),
-                new Category("Beauty", "beauty", "💄", 7),
-                new Category("Collectibles", "collectibles", "🎯", 8),
-                new Category("Other", "other", "📦", 99)
-        ));
     }
 
     private void seedUsers() {

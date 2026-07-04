@@ -1,6 +1,7 @@
 package com.novacart.store.dto;
 
 import com.novacart.store.entity.User;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 
@@ -54,7 +55,9 @@ public final class UserDtos {
 
     public record UpdateProfileRequest(
             @Size(min = 2, max = 80) String displayName,
-            @Size(max = 500) String avatarUrl,
+            @Size(max = 500)
+            @Pattern(regexp = "^$|^(https?://|/uploads/).+", message = "must be an http(s) URL or an /uploads/ path")
+            String avatarUrl,
             @Size(max = 600) String bio,
             @Size(max = 120) String location
     ) {}

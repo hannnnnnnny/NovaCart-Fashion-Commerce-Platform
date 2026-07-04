@@ -13,12 +13,12 @@ public final class OfferDtos {
 
     public record OfferCreateRequest(
             @NotNull Long listingId,
-            @NotNull @DecimalMin(value = "0.01") BigDecimal amount,
+            @NotNull @DecimalMin(value = "0.01") @jakarta.validation.constraints.Digits(integer = 10, fraction = 2) BigDecimal amount,
             @Size(max = 500) String message
     ) {}
 
     public record OfferCounterRequest(
-            @NotNull @DecimalMin(value = "0.01") BigDecimal amount,
+            @NotNull @DecimalMin(value = "0.01") @jakarta.validation.constraints.Digits(integer = 10, fraction = 2) BigDecimal amount,
             @Size(max = 500) String message
     ) {}
 

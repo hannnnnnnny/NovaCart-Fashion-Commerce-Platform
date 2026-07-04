@@ -12,6 +12,9 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        # Backstop for lazy associations: batch their loads instead of firing
+        # one query per parent row (N+1). Hot paths also use @EntityGraph.
+        default_batch_fetch_size: 30
   jackson:
     default-property-inclusion: non_null
   servlet:

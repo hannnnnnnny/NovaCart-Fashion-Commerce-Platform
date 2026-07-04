@@ -14,6 +14,7 @@ import com.novacart.store.repository.UserRepository;
 import com.novacart.store.security.CurrentUserService;
 import java.time.Instant;
 import java.util.List;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -68,9 +69,10 @@ public class ReviewService {
         review.setCreatedAt(Instant.now());
         reviewRepository.save(review);
 
-        reviewee.setRatingSum(reviewee.getRatingSum() + request.rating());
-        reviewee.setRatingCount(reviewee.getRatingCount() + 1);
-        userRepository.save(reviewee);
+        // Atomic increment (avoids a lost update if the counterparty reviews at
+        // the same time). The in-memory reviewee aggregate in this immediate
+        // response is one behind; the profile page refetches.
+        userRepository.addRating(reviewee.getId(), request.rating());
 
         return ReviewDtos.ReviewResponse.from(review);
     }
@@ -79,14 +81,21 @@ public class ReviewService {
     public List<ReviewDtos.ReviewResponse> listForUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
-        return reviewRepository.findByRevieweeOrderByCreatedAtDesc(user).stream()
+        return reviewRepository.findByRevieweeOrderByCreatedAtDesc(user, PageRequest.of(0, 100)).stream()
                 .map(ReviewDtos.ReviewResponse::from)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<ReviewDtos.ReviewResponse> listForOrder(Long orderId) {
+        User current = currentUserService.requireCurrentUser();
         TradeOrder order = orderService.requireById(orderId);
+        // Only the order's participants can read its reviews (prevents order-id
+        // enumeration of review contents).
+        if (!order.getBuyer().getId().equals(current.getId())
+                && !order.getSeller().getId().equals(current.getId())) {
+            throw new ForbiddenOperationException("You cannot view this order's reviews.");
+        }
         return reviewRepository.findByOrder(order).stream()
                 .map(ReviewDtos.ReviewResponse::from)
                 .toList();
