@@ -6,5 +6,7 @@ public enum OfferStatus {
     REJECTED,
     COUNTERED,
     WITHDRAWN,
-    EXPIRED
+    EXPIRED,
+    /** An accepted offer that was used to create an order — cannot be reused. */
+    CONSUMED
 }

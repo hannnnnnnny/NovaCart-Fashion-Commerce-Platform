@@ -16,6 +16,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -94,6 +95,15 @@ public class Listing {
 
     @Column(name = "sold_at")
     private Instant soldAt;
+
+    /**
+     * Optimistic-lock version. Guards against concurrent buy-now / offer-accept
+     * requests both transitioning the same listing (double-sell). A stale write
+     * throws OptimisticLockingFailureException, surfaced as HTTP 409.
+     */
+    @Version
+    @Column(name = "version", nullable = false)
+    private long version;
 
     public Listing() {
         this.status = ListingStatus.ACTIVE;

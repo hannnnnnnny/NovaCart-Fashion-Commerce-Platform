@@ -10,6 +10,7 @@ import com.novacart.store.entity.OrderStatus;
 import com.novacart.store.entity.TradeOrder;
 import com.novacart.store.entity.User;
 import com.novacart.store.exception.BusinessRuleException;
+import com.novacart.store.exception.ForbiddenOperationException;
 import com.novacart.store.exception.ResourceNotFoundException;
 import com.novacart.store.repository.OfferRepository;
 import com.novacart.store.repository.TradeOrderRepository;
@@ -61,21 +62,25 @@ public class OrderService {
         }
 
         BigDecimal price = listing.getPrice();
+        Offer acceptedOffer = null;
         if (request.acceptedOfferId() != null) {
             Offer offer = offerRepository.findById(request.acceptedOfferId())
                     .orElseThrow(() -> new ResourceNotFoundException("Offer not found."));
             if (!offer.getBuyer().getId().equals(buyer.getId())) {
-                throw new BusinessRuleException("This offer is not yours.");
+                throw new ForbiddenOperationException("This offer is not yours.");
             }
             if (!offer.getListing().getId().equals(listing.getId())) {
                 throw new BusinessRuleException("Offer does not match listing.");
             }
             if (offer.getStatus() != OfferStatus.ACCEPTED) {
-                throw new BusinessRuleException("Only accepted offers can be used to check out.");
+                // Already CONSUMED by a previous checkout, or rejected/expired.
+                throw new BusinessRuleException("This offer can no longer be used to check out.");
             }
             price = offer.getAmount();
+            acceptedOffer = offer;
         } else {
-            // if listing is RESERVED, only the buyer of the accepted offer can buy at list price
+            // Buy-now: only an ACTIVE listing can be purchased directly. A
+            // RESERVED listing is held for the accepted-offer buyer.
             if (listing.getStatus() == ListingStatus.RESERVED) {
                 throw new BusinessRuleException("This listing is reserved. Use your accepted offer to check out.");
             }
@@ -97,7 +102,16 @@ public class OrderService {
         order.setStatus(OrderStatus.PENDING_PAYMENT);
         order.setCreatedAt(Instant.now());
 
-        listingService.markReserved(listing);
+        if (acceptedOffer != null) {
+            // Listing was already reserved when the offer was accepted. Serialize
+            // concurrent checkouts (via @Version) and consume the offer so it
+            // cannot mint another order.
+            listingService.touchForCheckout(listing);
+            acceptedOffer.setStatus(OfferStatus.CONSUMED);
+            acceptedOffer.setRespondedAt(Instant.now());
+        } else {
+            listingService.markReserved(listing); // ACTIVE -> RESERVED, guarded + @Version
+        }
         return OrderDtos.OrderResponse.from(orderRepository.save(order));
     }
 
@@ -106,7 +120,7 @@ public class OrderService {
         User current = currentUserService.requireCurrentUser();
         TradeOrder order = requireById(orderId);
         if (!order.getBuyer().getId().equals(current.getId())) {
-            throw new BusinessRuleException("Only the buyer can pay this order.");
+            throw new ForbiddenOperationException("Only the buyer can pay this order.");
         }
         if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
             throw new BusinessRuleException("Order is not awaiting payment.");
@@ -121,7 +135,7 @@ public class OrderService {
         User current = currentUserService.requireCurrentUser();
         TradeOrder order = requireById(orderId);
         if (!order.getSeller().getId().equals(current.getId())) {
-            throw new BusinessRuleException("Only the seller can ship this order.");
+            throw new ForbiddenOperationException("Only the seller can ship this order.");
         }
         if (order.getStatus() != OrderStatus.PAID) {
             throw new BusinessRuleException("Order must be paid before shipping.");
@@ -138,7 +152,7 @@ public class OrderService {
         User current = currentUserService.requireCurrentUser();
         TradeOrder order = requireById(orderId);
         if (!order.getBuyer().getId().equals(current.getId())) {
-            throw new BusinessRuleException("Only the buyer can confirm receipt.");
+            throw new ForbiddenOperationException("Only the buyer can confirm receipt.");
         }
         if (order.getStatus() != OrderStatus.SHIPPED) {
             throw new BusinessRuleException("Order has not been shipped yet.");
@@ -157,7 +171,7 @@ public class OrderService {
         boolean isParticipant = order.getBuyer().getId().equals(current.getId())
                 || order.getSeller().getId().equals(current.getId());
         if (!isParticipant) {
-            throw new BusinessRuleException("You are not a participant in this order.");
+            throw new ForbiddenOperationException("You are not a participant in this order.");
         }
         if (order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.CANCELLED) {
             throw new BusinessRuleException("Order cannot be cancelled in its current state.");
@@ -177,7 +191,7 @@ public class OrderService {
         User current = currentUserService.requireCurrentUser();
         TradeOrder order = requireById(orderId);
         if (!order.getBuyer().getId().equals(current.getId()) && !order.getSeller().getId().equals(current.getId())) {
-            throw new BusinessRuleException("You cannot view this order.");
+            throw new ForbiddenOperationException("You cannot view this order.");
         }
         return OrderDtos.OrderResponse.from(order);
     }

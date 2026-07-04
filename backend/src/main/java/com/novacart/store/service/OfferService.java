@@ -8,6 +8,8 @@ import com.novacart.store.entity.Offer;
 import com.novacart.store.entity.OfferStatus;
 import com.novacart.store.entity.User;
 import com.novacart.store.exception.BusinessRuleException;
+import com.novacart.store.exception.ConflictException;
+import com.novacart.store.exception.ForbiddenOperationException;
 import com.novacart.store.exception.ResourceNotFoundException;
 import com.novacart.store.repository.OfferRepository;
 import com.novacart.store.security.CurrentUserService;
@@ -60,15 +62,30 @@ public class OfferService {
         User current = currentUserService.requireCurrentUser();
         Offer offer = requireById(offerId);
         if (!offer.getListing().getSeller().getId().equals(current.getId())) {
-            throw new BusinessRuleException("Only the seller can accept this offer.");
+            throw new ForbiddenOperationException("Only the seller can accept this offer.");
         }
         if (offer.getStatus() != OfferStatus.PENDING) {
             throw new BusinessRuleException("This offer is not pending.");
         }
+        acceptOfferAndReserve(offer);
+        return OfferDtos.OfferResponse.from(offer);
+    }
+
+    /**
+     * Shared accept logic for both a direct offer accept and a buyer accepting
+     * a seller counter. Requires the listing to still be ACTIVE (so a leftover
+     * offer can't resurrect a SOLD item), reserves it, and rejects every other
+     * pending offer on the listing so only one buyer can hold the reservation.
+     */
+    private void acceptOfferAndReserve(Offer offer) {
+        Listing listing = offer.getListing();
+        if (listing.getStatus() != ListingStatus.ACTIVE) {
+            throw new ConflictException("This listing is no longer available.");
+        }
         offer.setStatus(OfferStatus.ACCEPTED);
         offer.setRespondedAt(Instant.now());
-        listingService.markReserved(offer.getListing());
-        return OfferDtos.OfferResponse.from(offer);
+        offerRepository.rejectOtherPendingOffers(listing, offer.getId(), Instant.now());
+        listingService.markReserved(listing);
     }
 
     @Transactional
@@ -76,7 +93,7 @@ public class OfferService {
         User current = currentUserService.requireCurrentUser();
         Offer offer = requireById(offerId);
         if (!offer.getListing().getSeller().getId().equals(current.getId())) {
-            throw new BusinessRuleException("Only the seller can reject this offer.");
+            throw new ForbiddenOperationException("Only the seller can reject this offer.");
         }
         if (offer.getStatus() != OfferStatus.PENDING) {
             throw new BusinessRuleException("This offer is not pending.");
@@ -91,7 +108,7 @@ public class OfferService {
         User current = currentUserService.requireCurrentUser();
         Offer original = requireById(offerId);
         if (!original.getListing().getSeller().getId().equals(current.getId())) {
-            throw new BusinessRuleException("Only the seller can counter this offer.");
+            throw new ForbiddenOperationException("Only the seller can counter this offer.");
         }
         if (original.getStatus() != OfferStatus.PENDING) {
             throw new BusinessRuleException("This offer is not pending.");
@@ -119,7 +136,7 @@ public class OfferService {
                 ? offer.getListing().getSeller().getId().equals(current.getId())
                 : offer.getBuyer().getId().equals(current.getId());
         if (!isAuthor) {
-            throw new BusinessRuleException("You can only withdraw your own offers.");
+            throw new ForbiddenOperationException("You can only withdraw your own offers.");
         }
         if (offer.getStatus() != OfferStatus.PENDING) {
             throw new BusinessRuleException("Only pending offers can be withdrawn.");
@@ -137,14 +154,12 @@ public class OfferService {
             throw new BusinessRuleException("Only counter-offers from the seller can be accepted here.");
         }
         if (!offer.getBuyer().getId().equals(current.getId())) {
-            throw new BusinessRuleException("Only the buyer in this thread can accept the counter.");
+            throw new ForbiddenOperationException("Only the buyer in this thread can accept the counter.");
         }
         if (offer.getStatus() != OfferStatus.PENDING) {
             throw new BusinessRuleException("This counter-offer is no longer pending.");
         }
-        offer.setStatus(OfferStatus.ACCEPTED);
-        offer.setRespondedAt(Instant.now());
-        listingService.markReserved(offer.getListing());
+        acceptOfferAndReserve(offer);
         return OfferDtos.OfferResponse.from(offer);
     }
 
