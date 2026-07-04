@@ -68,6 +68,8 @@ async function confirmReceipt() {
 
 async function cancel() {
   const reason = prompt(t('orders.cancelReason'))
+  // prompt() returns null when the user dismisses it — don't cancel then.
+  if (reason === null) return
   try { order.value = await orderApi.cancel(order.value.id, { reason }); toast.success(t('orderStatus.CANCELLED')) }
   catch (err) { toast.error(apiError(err)) }
 }
