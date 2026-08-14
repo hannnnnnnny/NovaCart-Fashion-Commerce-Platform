@@ -1,0 +1,29 @@
+# ReNova
+
+ReNova is a portfolio-ready second-hand marketplace. It demonstrates public listing discovery, user sign-up and login, seller listing creation, offers, buyer-seller messaging, order state management, reviews, favorites, i18n, and a real Spring Boot REST API.
+
+## Core Pages
+
+- Home: /
+- Browse listings: /browse
+- Listing detail: /listings/:id
+- Post listing: /sell
+- Messages: /messages
+- Offers: /offers
+- Orders: /orders
+- Favorites: /favorites
+- Profile: /profile/me
+
+## Technical Architecture
+
+- Frontend: Vue 3, Vite, Vue Router, Pinia, Vue I18n, Axios, custom responsive CSS
+- Backend: Java 21, Spring Boot 4, Spring Data JPA, Spring Security, JWT, REST JSON APIs
+- Database: MySQL at runtime, H2 for tests
+- Payments: demo state transitions only; no real card processor is connected
+
+## Useful Documentation
+
+- README.md
+- docs/ARCHITECTURE.md
+- docs/API.md
+- docs/DEPLOYMENT.md

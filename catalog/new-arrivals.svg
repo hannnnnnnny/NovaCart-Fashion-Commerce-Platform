@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" role="img" aria-label="New arrivals fashion product artwork">
+  <rect width="900" height="1200" fill="#e7eee9"/>
+  <path d="M450 190 598 332v560H302V332L450 190Z" fill="#31473f"/>
+  <path d="M302 332h296" stroke="#f7efe6" stroke-width="28"/>
+  <path d="M366 492h168M366 580h168M366 668h168" stroke="#9ebbac" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="650" cy="230" r="74" fill="#c86f48" opacity=".5"/>
+</svg>

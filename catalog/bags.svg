@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" role="img" aria-label="Fashion bag product artwork">
+  <rect width="900" height="1200" fill="#ece5d8"/>
+  <path d="M260 452h380l48 420c9 78-52 146-130 146H342c-78 0-139-68-130-146l48-420Z" fill="#4b332c"/>
+  <path d="M332 452c0-101 50-178 118-178s118 77 118 178" fill="none" stroke="#9c705a" stroke-width="42" stroke-linecap="round"/>
+  <path d="M310 608h280" stroke="#d9b98f" stroke-width="28" stroke-linecap="round"/>
+  <circle cx="670" cy="280" r="92" fill="#bd6f53" opacity=".5"/>
+</svg>

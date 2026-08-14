@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" role="img" aria-label="Men fashion editorial product artwork">
+  <rect width="900" height="1200" fill="#d9e3df"/>
+  <rect x="250" y="270" width="400" height="650" rx="44" fill="#24333b"/>
+  <path d="M250 380h400" stroke="#9fb8b1" stroke-width="28"/>
+  <path d="M365 270l85 148 85-148" fill="none" stroke="#f4eee4" stroke-width="34" stroke-linejoin="round"/>
+  <circle cx="450" cy="170" r="84" fill="#b38b6d"/>
+  <path d="M310 920h280" stroke="#24333b" stroke-width="36" stroke-linecap="round"/>
+</svg>

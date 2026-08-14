@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ReNova">
+  <rect width="64" height="64" rx="14" fill="#201a16"/>
+  <path d="M18 22h6l4 20h18l4-14H28" fill="none" stroke="#f4d27a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="31" cy="48" r="3.5" fill="#f4d27a"/>
+  <circle cx="45" cy="48" r="3.5" fill="#f4d27a"/>
+  <path d="M26 18h24" stroke="#f8f3ea" stroke-width="4" stroke-linecap="round"/>
+</svg>

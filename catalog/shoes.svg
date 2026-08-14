@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" role="img" aria-label="Fashion shoe product artwork">
+  <rect width="900" height="1200" fill="#e2e8ed"/>
+  <path d="M190 660c160 12 257-68 346-178 24-30 72-18 80 20l44 207 94 38c42 17 35 80-10 88H251c-74 0-127-72-104-142 6-20 22-35 43-33Z" fill="#1f2a32"/>
+  <path d="M222 768h512" stroke="#f6f1e8" stroke-width="34" stroke-linecap="round"/>
+  <path d="M390 585l110 76" stroke="#c46f52" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="675" cy="330" r="110" fill="#95a9b4" opacity=".45"/>
+</svg>

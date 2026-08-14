@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" role="img" aria-label="Sportswear and equipment product artwork">
+  <rect width="900" height="1200" fill="#dfeae4"/>
+  <path d="M450 180 650 330l-82 138-64-45v445H396V423l-64 45-82-138L450 180Z" fill="#20413a"/>
+  <path d="M348 548h204" stroke="#8cc0a7" stroke-width="34" stroke-linecap="round"/>
+  <circle cx="660" cy="830" r="86" fill="none" stroke="#c86f48" stroke-width="32"/>
+  <path d="M214 858h210" stroke="#20413a" stroke-width="28" stroke-linecap="round"/>
+</svg>

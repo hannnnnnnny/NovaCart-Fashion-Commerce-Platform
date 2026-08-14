@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" role="img" aria-label="Seasonal collection fashion product artwork">
+  <rect width="900" height="1200" fill="#e6e0d4"/>
+  <path d="M450 150 620 430l-72 500H352l-72-500L450 150Z" fill="#26343b"/>
+  <path d="M334 430h232" stroke="#d9b56d" stroke-width="30"/>
+  <path d="M390 930h120" stroke="#26343b" stroke-width="28" stroke-linecap="round"/>
+  <circle cx="675" cy="245" r="106" fill="#c66f58" opacity=".42"/>
+  <circle cx="245" cy="835" r="76" fill="#94a89f" opacity=".52"/>
+</svg>
