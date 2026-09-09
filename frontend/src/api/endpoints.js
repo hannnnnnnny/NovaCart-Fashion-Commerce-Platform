@@ -78,6 +78,19 @@ export const uploadApi = {
     for (const f of files) fd.append('files', f)
     return client.post('/uploads/images', fd, {
       headers: { 'Content-Type': undefined }
-    }).then(unwrap)
+    }).then(unwrap).then(resolveUploadedImages)
+  }
+}
+
+function resolveUploadedImages(result) {
+  const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+  if (!/^https?:\/\//.test(apiBase)) return result
+  // Upload paths belong to the API origin when the SPA is hosted separately.
+  return {
+    ...result,
+    images: result.images.map((image) => ({
+      ...image,
+      url: image.url.startsWith('/uploads/') ? new URL(image.url, apiBase).href : image.url
+    }))
   }
 }

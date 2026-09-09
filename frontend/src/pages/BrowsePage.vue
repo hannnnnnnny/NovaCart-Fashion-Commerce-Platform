@@ -6,6 +6,7 @@ import { listingApi, categoryApi } from '../api/endpoints'
 import { useToastStore } from '../stores/toast'
 import { apiError } from '../api/client'
 import ListingCard from '../components/ListingCard.vue'
+import DataState from '../components/DataState.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -15,6 +16,8 @@ const toast = useToastStore()
 const categories = ref([])
 const listings = ref([])
 const loading = ref(false)
+const loadingMore = ref(false)
+const error = ref('')
 const total = ref(0)
 const page = ref(0)
 // Mobile: filters live behind a toggle so they don't bury the results.
@@ -42,27 +45,48 @@ async function loadCategories() {
   }
 }
 
+function searchParams() {
+  return {
+    page: page.value,
+    size: 24,
+    keyword: filters.value.keyword || undefined,
+    categoryId: filters.value.categoryId || undefined,
+    minPrice: filters.value.minPrice || undefined,
+    maxPrice: filters.value.maxPrice || undefined,
+    condition: filters.value.condition || undefined,
+    location: filters.value.location || undefined,
+    sort: filters.value.sort
+  }
+}
+
 async function search() {
   loading.value = true
+  error.value = ''
   try {
-    const params = {
-      page: page.value,
-      size: 24,
-      keyword: filters.value.keyword || undefined,
-      categoryId: filters.value.categoryId || undefined,
-      minPrice: filters.value.minPrice || undefined,
-      maxPrice: filters.value.maxPrice || undefined,
-      condition: filters.value.condition || undefined,
-      location: filters.value.location || undefined,
-      sort: filters.value.sort
-    }
-    const result = await listingApi.search(params)
+    const result = await listingApi.search(searchParams())
     listings.value = result.content || []
     total.value = result.totalElements || 0
   } catch (err) {
-    toast.error(apiError(err))
+    error.value = apiError(err)
   } finally {
     loading.value = false
+  }
+}
+
+// "Load more" appends the next page — the pragmatic pagination for a
+// waterfall layout (numbered pages would reshuffle the columns).
+async function loadMore() {
+  loadingMore.value = true
+  try {
+    page.value += 1
+    const result = await listingApi.search(searchParams())
+    listings.value = [...listings.value, ...(result.content || [])]
+    total.value = result.totalElements || 0
+  } catch (err) {
+    page.value = Math.max(0, page.value - 1)
+    toast.error(apiError(err))
+  } finally {
+    loadingMore.value = false
   }
 }
 
@@ -102,8 +126,17 @@ function queryValue(value) {
 }
 
 watch(() => route.query, (next) => {
-  filters.value.keyword = next.keyword || ''
-  filters.value.categoryId = next.categoryId ? Number(next.categoryId) : ''
+  // Restore EVERY filter from the URL so back/forward keeps the form in sync
+  // with the results (previously only keyword/categoryId were restored).
+  filters.value = {
+    keyword: next.keyword || '',
+    categoryId: next.categoryId ? Number(next.categoryId) : '',
+    minPrice: next.minPrice || '',
+    maxPrice: next.maxPrice || '',
+    condition: next.condition || '',
+    location: next.location || '',
+    sort: next.sort || 'newest'
+  }
   page.value = 0
   search()
 })
@@ -164,11 +197,16 @@ onMounted(async () => {
             </select>
           </div>
 
-          <div v-if="loading" class="muted">{{ t('common.loading') }}</div>
-          <div v-else-if="listings.length === 0" class="empty-state">{{ t('common.empty') }}</div>
-          <div v-else class="grid grid-listings">
-            <ListingCard v-for="l in listings" :key="l.id" :listing="l" />
-          </div>
+          <DataState :loading="loading" :error="error" :empty="listings.length === 0" @retry="search">
+            <div class="grid grid-listings">
+              <ListingCard v-for="l in listings" :key="l.id" :listing="l" />
+            </div>
+            <div v-if="listings.length < total" class="text-center" style="margin-top: 24px">
+              <button class="btn btn-outline" type="button" :disabled="loadingMore" @click="loadMore">
+                {{ loadingMore ? t('common.loading') : t('common.loadMore') }}
+              </button>
+            </div>
+          </DataState>
         </section>
       </div>
     </div>

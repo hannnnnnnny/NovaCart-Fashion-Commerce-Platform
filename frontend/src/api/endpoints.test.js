@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { client } = vi.hoisted(() => ({
   client: {
@@ -22,10 +22,13 @@ import {
   offerApi,
   orderApi,
   reviewApi,
-  userApi
+  userApi,
+  uploadApi
 } from './endpoints'
 
 const apiResponse = { data: { data: { ok: true } } }
+
+afterEach(() => vi.unstubAllEnvs())
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -33,6 +36,25 @@ beforeEach(() => {
 })
 
 describe('endpoint contracts', () => {
+  it('resolves uploaded images against the separately hosted API', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com/api')
+    client.post.mockResolvedValue({ data: { data: { images: [{ url: '/uploads/photo.png' }] } } })
+    const result = await uploadApi.images([])
+    expect(result.images[0].url).toBe('https://api.example.com/uploads/photo.png')
+  })
+
+  it('preserves upload paths for same-origin hosting', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', '/api')
+    client.post.mockResolvedValue({ data: { data: { images: [{ url: '/uploads/photo.png' }] } } })
+    expect((await uploadApi.images([])).images[0].url).toBe('/uploads/photo.png')
+  })
+
+  it('preserves absolute image URLs from an upload service', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com/api')
+    client.post.mockResolvedValue({ data: { data: { images: [{ url: 'https://images.example.com/photo.png' }] } } })
+    expect((await uploadApi.images([])).images[0].url).toBe('https://images.example.com/photo.png')
+  })
+
   it('maps authentication and catalog reads to real backend routes', async () => {
     await expect(authApi.login({ email: 'ava@renova.local' })).resolves.toEqual({ ok: true })
     expect(client.post).toHaveBeenCalledWith('/auth/login', { email: 'ava@renova.local' })

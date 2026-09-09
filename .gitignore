@@ -63,3 +63,6 @@ frontend/dist/
 
 # Local Claude Code dev-tool config
 .claude/
+
+# Python deployment helper bytecode
+__pycache__/

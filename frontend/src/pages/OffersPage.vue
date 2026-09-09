@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 import { apiError } from '../api/client'
 import { formatPrice, formatRelative } from '../utils/format'
+import DataState from '../components/DataState.vue'
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -17,12 +18,15 @@ const tab = ref('received')
 const received = ref([])
 const sent = ref([])
 const loading = ref(false)
+const error = ref('')
+const acting = ref(false)
 const counterFor = ref(null)
 const counterAmount = ref('')
 const counterMessage = ref('')
 
 async function refresh() {
   loading.value = true
+  error.value = ''
   try {
     const [r, s] = await Promise.all([
       offerApi.received({ page: 0, size: 50 }),
@@ -30,37 +34,48 @@ async function refresh() {
     ])
     received.value = r.content || []
     sent.value = s.content || []
-  } catch (err) { toast.error(apiError(err)) } finally { loading.value = false }
+  } catch (err) { error.value = apiError(err) } finally { loading.value = false }
 }
 
-async function accept(offer) {
-  try { await offerApi.accept(offer.id); toast.success(t('offerStatus.ACCEPTED')); refresh() }
+// Wraps an offer action with a busy flag so double-clicks can't double-submit.
+async function act(fn, successKey) {
+  if (acting.value) return
+  acting.value = true
+  try { await fn(); toast.success(t(successKey)); await refresh() }
   catch (err) { toast.error(apiError(err)) }
+  finally { acting.value = false }
 }
-async function reject(offer) {
-  try { await offerApi.reject(offer.id); toast.success(t('offerStatus.REJECTED')); refresh() }
-  catch (err) { toast.error(apiError(err)) }
+
+function accept(offer) { act(() => offerApi.accept(offer.id), 'offerStatus.ACCEPTED') }
+function reject(offer) {
+  if (!confirm(t('offer.confirmReject'))) return
+  act(() => offerApi.reject(offer.id), 'offerStatus.REJECTED')
 }
-async function withdraw(offer) {
-  try { await offerApi.withdraw(offer.id); toast.success(t('offerStatus.WITHDRAWN')); refresh() }
-  catch (err) { toast.error(apiError(err)) }
+function withdraw(offer) {
+  if (!confirm(t('offer.confirmWithdraw'))) return
+  act(() => offerApi.withdraw(offer.id), 'offerStatus.WITHDRAWN')
 }
-async function acceptCounter(offer) {
-  try { await offerApi.acceptCounter(offer.id); toast.success(t('offerStatus.ACCEPTED')); refresh() }
-  catch (err) { toast.error(apiError(err)) }
-}
+function acceptCounter(offer) { act(() => offerApi.acceptCounter(offer.id), 'offerStatus.ACCEPTED') }
+
 function openCounter(offer) {
   counterFor.value = offer
   counterAmount.value = ''
   counterMessage.value = ''
 }
 async function submitCounter() {
+  const amount = Number(counterAmount.value)
+  if (!counterAmount.value || Number.isNaN(amount) || amount <= 0) {
+    toast.error(t('offer.invalidAmount'))
+    return
+  }
+  if (acting.value) return
+  acting.value = true
   try {
-    await offerApi.counter(counterFor.value.id, { amount: Number(counterAmount.value), message: counterMessage.value })
+    await offerApi.counter(counterFor.value.id, { amount, message: counterMessage.value })
     counterFor.value = null
     toast.success(t('offer.sent'))
-    refresh()
-  } catch (err) { toast.error(apiError(err)) }
+    await refresh()
+  } catch (err) { toast.error(apiError(err)) } finally { acting.value = false }
 }
 
 function checkoutWithOffer(offer) {
@@ -79,9 +94,8 @@ onMounted(refresh)
         <button class="tab" :class="{ 'is-active': tab === 'sent' }" @click="tab = 'sent'" type="button">{{ t('offer.sentTab') }} ({{ sent.length }})</button>
       </div>
 
-      <div v-if="loading" class="muted">{{ t('common.loading') }}</div>
-
-      <div v-else class="stack">
+      <DataState :loading="loading" :error="error" @retry="refresh">
+      <div class="stack">
         <template v-if="tab === 'received'">
           <div v-if="received.length === 0" class="empty-state">{{ t('offer.noOffers') }}</div>
           <div v-for="o in received" :key="o.id" class="offer-card">
@@ -139,6 +153,7 @@ onMounted(refresh)
           </div>
         </template>
       </div>
+      </DataState>
 
       <div v-if="counterFor" class="modal-overlay" @click.self="counterFor = null">
         <div class="modal">

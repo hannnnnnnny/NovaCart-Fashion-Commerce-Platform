@@ -25,7 +25,7 @@ const year = new Date().getFullYear()
         </div>
         <div>
           <h4 style="color:#fff; font-size:14px; margin-bottom: 12px;">Demo</h4>
-          <p style="font-size:13px; opacity:.7">ReNova is a portfolio demo. No real payments or shipping. Seeded accounts use the password <code style="background:#000; padding:1px 4px; border-radius:4px">DemoPassword1!</code>.</p>
+          <p style="font-size:13px; opacity:.7">ReNova is a portfolio demo. Payments and shipping are simulated. Create an account to try it.</p>
         </div>
       </div>
       <div class="divider" style="border-color:#3a3633"></div>
