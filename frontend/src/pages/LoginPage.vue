@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 import { apiError } from '../api/client'
+import { DEMO_MODE } from '../api/demo'
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -49,12 +50,14 @@ function tryDemo(account) {
         <button class="btn btn-primary btn-lg btn-block" :disabled="submitting" type="submit">{{ submitting ? t('common.loading') : t('common.login') }}</button>
       </form>
 
-      <div class="divider"></div>
-      <p class="muted text-center" style="font-size: 13px; margin-bottom: 8px">Demo accounts (password <code>DemoPassword1!</code>)</p>
-      <div class="row-wrap" style="justify-content: center; gap: 6px">
-        <button class="btn btn-ghost btn-sm" type="button" @click="tryDemo('ava@renova.local')">ava@renova.local</button>
-        <button class="btn btn-ghost btn-sm" type="button" @click="tryDemo('liam@renova.local')">liam@renova.local</button>
-      </div>
+      <template v-if="DEMO_MODE">
+        <div class="divider"></div>
+        <p class="muted text-center" style="font-size: 13px; margin-bottom: 8px">Demo accounts (password <code>DemoPassword1!</code>)</p>
+        <div class="row-wrap" style="justify-content: center; gap: 6px">
+          <button class="btn btn-ghost btn-sm" type="button" @click="tryDemo('ava@renova.local')">ava@renova.local</button>
+          <button class="btn btn-ghost btn-sm" type="button" @click="tryDemo('liam@renova.local')">liam@renova.local</button>
+        </div>
+      </template>
 
       <p class="text-center muted" style="margin-top: 20px; font-size: 13px">{{ t('auth.noAccount') }} <RouterLink :to="{ name: 'signup' }" class="bold" style="color: var(--primary-strong)">{{ t('auth.createAccount') }}</RouterLink></p>
     </div>

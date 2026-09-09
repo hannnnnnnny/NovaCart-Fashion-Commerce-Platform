@@ -98,7 +98,7 @@ def publish_image():
         "00000000-0000-0000-0000-000000000000", "--password-stdin"],
         input=credentials["accessToken"], text=True, check=True)
     for name in ("renova-backend", "renova-frontend"):
-        tag = "azure-20260909-final" if name == "renova-frontend" else "azure-20260909"
+        tag = "azure-20260909-login" if name == "renova-frontend" else "azure-20260909"
         image = credentials["loginServer"] + f"/{name}:{tag}"
         subprocess.run(["docker", "tag", f"{name}:{tag}", image], check=True)
         subprocess.run(["docker", "push", image], check=True)
@@ -141,7 +141,7 @@ def application_config(environment, identity, registry, website, database):
                 "secrets": [{"name": "db-password", "value": os.environ["RENOVA_DB_PASSWORD"]},
                             {"name": "jwt-secret", "value": os.environ["JWT_SECRET"]}]},
             "template": {"containers": [container, {
-                "name": "web", "image": registry + "/renova-frontend:azure-20260909-final",
+                "name": "web", "image": registry + "/renova-frontend:azure-20260909-login",
                 "resources": {"cpu": 0.25, "memory": "0.5Gi"},
                 "probes": [{"type": "Readiness", "httpGet": {"path": "/health", "port": 80},
                             "periodSeconds": 10}]}],

@@ -26,6 +26,7 @@ The budget uses the subscription billing currency, NZD. It is an alert, not a ha
 - HTTPS-only ingress, with Nginx forwarding to the API on localhost inside the app.
 - JDBC uses `sslMode=VERIFY_IDENTITY`. MySQL's `renova_app` user is limited to the application schema; the server administrator is not used by the application.
 - Database firewall rules allow the Container App's published outbound IPs. Re-run the firewall stage if those addresses change. Deletion of the temporary `deployment-workstation` rule has been submitted; Azure's asynchronous deletion was still in progress at handoff. Confirm its absence before treating cleanup as complete.
+- The production login page hides demo account shortcuts. They are available only when `VITE_RENOVA_DEMO=true`; Azure users must register their own accounts.
 - JWT and database passwords are generated locally and injected as Azure Container App secrets. `.env.azure-secrets`, `.env.azure-config`, and `.env.azure-containerapp.json` are gitignored and must never be committed or shared.
 - Images are mounted from Azure Files; database records and images survived an actual Container App revision restart.
 - The application runs with the `prod` profile. Browser demo data is disabled during Docker builds.
@@ -39,7 +40,7 @@ $env:AZURE_CONFIG_DIR = Join-Path $PWD '.env.azure-config'
 & ./.env.azure-tools/Scripts/az.bat account show
 
 docker build -t renova-backend:azure-20260909 ./backend
-docker build -t renova-frontend:azure-20260909-final --build-arg VITE_API_BASE_URL=/api --build-arg NGINX_CONFIG=nginx.azure.conf ./frontend
+docker build -t renova-frontend:azure-20260909-login --build-arg VITE_API_BASE_URL=/api --build-arg NGINX_CONFIG=nginx.azure.conf ./frontend
 & ./.env.azure-tools/Scripts/python.exe scripts/azure-deploy.py image
 & ./.env.azure-tools/Scripts/python.exe scripts/azure-deploy.py api
 ```
