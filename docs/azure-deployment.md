@@ -25,7 +25,7 @@ The budget uses the subscription billing currency, NZD. It is an alert, not a ha
 
 - HTTPS-only ingress, with Nginx forwarding to the API on localhost inside the app.
 - JDBC uses `sslMode=VERIFY_IDENTITY`. MySQL's `renova_app` user is limited to the application schema; the server administrator is not used by the application.
-- Database firewall rules allow the Container App's published outbound IPs. Re-run the firewall stage if those addresses change. The workstation initialization rule is removed after deployment.
+- Database firewall rules allow the Container App's published outbound IPs. Re-run the firewall stage if those addresses change. Deletion of the temporary `deployment-workstation` rule has been submitted; Azure's asynchronous deletion was still in progress at handoff. Confirm its absence before treating cleanup as complete.
 - JWT and database passwords are generated locally and injected as Azure Container App secrets. `.env.azure-secrets`, `.env.azure-config`, and `.env.azure-containerapp.json` are gitignored and must never be committed or shared.
 - Images are mounted from Azure Files; database records and images survived an actual Container App revision restart.
 - The application runs with the `prod` profile. Browser demo data is disabled during Docker builds.
